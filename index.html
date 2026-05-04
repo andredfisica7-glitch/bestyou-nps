@@ -238,6 +238,18 @@
         <div class="rating-opt" onclick="selectRating('reposicoes', 5, this)"><span class="rating-num">5</span><span class="rating-label">Ótimo</span></div>
       </div>
 
+      <div class="motivo-wrap" style="margin-top:20px;">
+        <label class="motivo-label">Quantas aulas você possui a repor?</label>
+        <div class="rating-options" id="rating-aulasrepor" style="flex-wrap:wrap;">
+          <div class="rating-opt" onclick="selectRating('aulasrepor', 0, this)" style="flex:none;min-width:60px;"><span class="rating-num">0</span></div>
+          <div class="rating-opt" onclick="selectRating('aulasrepor', 1, this)" style="flex:none;min-width:60px;"><span class="rating-num">1</span></div>
+          <div class="rating-opt" onclick="selectRating('aulasrepor', 2, this)" style="flex:none;min-width:60px;"><span class="rating-num">2</span></div>
+          <div class="rating-opt" onclick="selectRating('aulasrepor', 3, this)" style="flex:none;min-width:60px;"><span class="rating-num">3</span></div>
+          <div class="rating-opt" onclick="selectRating('aulasrepor', 4, this)" style="flex:none;min-width:60px;"><span class="rating-num">4</span></div>
+          <div class="rating-opt" onclick="selectRating('aulasrepor', 5, this)" style="flex:none;min-width:60px;"><span class="rating-num">5+</span></div>
+        </div>
+      </div>
+
       <button class="btn-next" id="btn-4" onclick="goNext(4)" disabled>Próximo</button>
       <button class="btn-back" onclick="goBack(4)">← Voltar</button>
     </div>
@@ -313,7 +325,7 @@
 
   const TOTAL_STEPS = 6;
   let currentStep = 1;
-  const ratings = { aula: null, intensidade: null, reposicoes: null, limpeza: null, estrutura: null };
+  const ratings = { aula: null, intensidade: null, reposicoes: null, aulasrepor: null, limpeza: null, estrutura: null };
 
   function updateProgress() {
     const pct = ((currentStep - 1) / (TOTAL_STEPS - 1)) * 100;
@@ -373,6 +385,7 @@
       notaAula: ratings.aula,
       notaIntensidade: ratings.intensidade,
       notaReposicoes: ratings.reposicoes,
+      aulasARepor: ratings.aulasrepor !== null ? ratings.aulasrepor : '—',
       notaLimpeza: ratings.limpeza,
       motivoLimpeza: document.getElementById('motivoLimpeza').value.trim() || '—',
       notaEstrutura: ratings.estrutura,
