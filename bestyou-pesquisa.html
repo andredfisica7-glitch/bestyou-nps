@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Best You Studio — Pesquisa de Experiência</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --gold: #C9A84C; --gold-light: #E8C97A;
+    --black: #0A0A0A; --dark: #111111; --dark2: #1A1A1A;
+    --white: #FFFFFF; --w60: rgba(255,255,255,0.6); --w30: rgba(255,255,255,0.3); --w10: rgba(255,255,255,0.07);
+    --green: #4ade80; --red: #f87171;
+  }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--black); color: var(--white); }
+
+  /* PROGRESS */
+  .progress-wrap { position: fixed; top: 0; left: 0; right: 0; z-index: 50; }
+  .progress-bar-bg { height: 3px; background: rgba(255,255,255,0.08); }
+  .progress-bar-fill { height: 3px; background: linear-gradient(90deg, var(--gold), var(--gold-light)); transition: width 0.4s ease; }
+  .progress-label { text-align: center; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--w30); padding: 10px 0 0; }
+
+  /* STEPS */
+  .steps-container { height: 100vh; overflow: hidden; position: relative; }
+  .step {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 60px 32px 40px;
+    opacity: 0; pointer-events: none;
+    transform: translateX(60px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .step.active { opacity: 1; pointer-events: all; transform: translateX(0); }
+  .step.leaving { opacity: 0; transform: translateX(-60px); }
+  .step-inner { width: 100%; max-width: 480px; }
+
+  /* LABELS */
+  .step-tag { font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+  .step-question { font-size: clamp(20px, 5vw, 27px); font-weight: 800; line-height: 1.25; letter-spacing: -0.3px; margin-bottom: 8px; }
+  .step-sub { font-size: 13px; color: var(--w60); margin-bottom: 30px; line-height: 1.5; }
+
+  /* INPUT TEXT */
+  .input-field {
+    width: 100%; background: var(--dark2); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 14px 18px;
+    font-size: 15px; color: var(--white); outline: none;
+    transition: border-color 0.2s; font-family: inherit; margin-bottom: 12px;
+  }
+  .input-field:focus { border-color: rgba(201,168,76,0.5); }
+  .input-field::placeholder { color: var(--w30); }
+
+  /* SELECT */
+  .select-field {
+    width: 100%; background: var(--dark2); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 14px 18px;
+    font-size: 15px; color: var(--white); outline: none;
+    cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C9A84C' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 18px center;
+    padding-right: 44px; transition: border-color 0.2s; font-family: inherit; margin-bottom: 12px;
+  }
+  .select-field:focus { border-color: rgba(201,168,76,0.5); }
+  .select-field option { background: var(--dark2); color: var(--white); }
+
+  /* PROFESSOR FIXO (quando vem pela URL) */
+  .prof-fixed {
+    width: 100%; background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 10px; padding: 14px 18px; margin-bottom: 12px;
+    font-size: 15px; color: var(--gold-light);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .prof-fixed .prof-icon { font-size: 16px; }
+  .prof-fixed .prof-name { font-weight: 700; }
+
+  /* NPS SCALE 0-10 */
+  .nps-scale { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .nps-opt {
+    flex: 1; min-width: 40px;
+    background: var(--dark2); border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 9px; padding: 14px 4px; text-align: center; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+    font-size: 16px; font-weight: 800; color: var(--white);
+  }
+  .nps-opt:hover { border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.05); }
+  .nps-opt.selected { border-color: var(--gold); background: rgba(201,168,76,0.12); color: var(--gold); }
+  .nps-anchors { display: flex; justify-content: space-between; font-size: 10px; color: var(--w30); margin-bottom: 24px; letter-spacing: 0.3px; }
+
+  /* CHOICE (cancelar) */
+  .choice-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .choice-opt {
+    background: var(--dark2); border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 16px 18px; cursor: pointer;
+    transition: all 0.15s; user-select: none; font-size: 15px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .choice-opt:hover { border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.05); }
+  .choice-opt.selected { border-color: var(--gold); background: rgba(201,168,76,0.1); color: var(--gold-light); }
+  .choice-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--w30); flex-shrink: 0; transition: all 0.15s; }
+  .choice-opt.selected .choice-dot { border-color: var(--gold); background: var(--gold); box-shadow: inset 0 0 0 3px var(--dark2); }
+
+  /* TEXTAREA */
+  .motivo-wrap { margin-top: 4px; margin-bottom: 16px; }
+  .motivo-label { font-size: 12px; color: var(--w60); letter-spacing: 0.3px; margin-bottom: 8px; display: block; line-height: 1.4; }
+  .motivo-label span { color: var(--w30); }
+  textarea.input-field { resize: none; height: 76px; font-size: 13px; margin-bottom: 0; }
+
+  /* BUTTON */
+  .btn-next {
+    width: 100%; padding: 16px;
+    background: var(--gold); border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--black); cursor: pointer; transition: all 0.2s; margin-top: 20px; font-family: inherit;
+  }
+  .btn-next:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .btn-next:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .btn-back {
+    background: none; border: none; color: var(--w30); font-size: 12px;
+    cursor: pointer; letter-spacing: 1px; text-transform: uppercase; padding: 12px 0 0;
+    display: block; width: 100%; text-align: center; font-family: inherit; transition: color 0.2s;
+  }
+  .btn-back:hover { color: var(--w60); }
+
+  /* SUCCESS */
+  .success-icon { font-size: 48px; margin-bottom: 20px; }
+  .success-title { font-size: 28px; font-weight: 800; margin-bottom: 10px; }
+  .success-sub { font-size: 14px; color: var(--w60); line-height: 1.65; max-width: 360px; text-align: center; }
+
+  /* SENDING OVERLAY */
+  .sending-overlay {
+    position: fixed; inset: 0; background: rgba(10,10,10,0.9);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .sending-overlay.visible { opacity: 1; pointer-events: all; }
+  .spinner {
+    width: 36px; height: 36px; border: 2px solid rgba(201,168,76,0.2);
+    border-top-color: var(--gold); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin-bottom: 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .sending-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--w60); }
+
+  @media (max-width: 480px) {
+    .step { padding: 56px 18px 30px; }
+    .nps-opt { padding: 13px 2px; font-size: 15px; min-width: 34px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-wrap">
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-label" id="progressLabel"></div>
+</div>
+
+<div class="sending-overlay" id="sendingOverlay">
+  <div class="spinner"></div>
+  <div class="sending-label">Enviando suas respostas...</div>
+</div>
+
+<div class="steps-container" id="stepsContainer">
+
+  <!-- STEP 1 — Identificação -->
+  <div class="step active" id="step-1">
+    <div class="step-inner">
+      <div class="step-tag">Best You Studio</div>
+      <div class="step-question">Sua opinião, em 90 segundos</div>
+      <div class="step-sub">Queremos entender de verdade como está sua experiência. Suas respostas são confidenciais e nos ajudam a melhorar seu treino.</div>
+
+      <input class="input-field" type="text" id="nomeAluno" placeholder="Seu nome completo" autocomplete="name" />
+
+      <!-- Dropdown mostrado só quando o professor NÃO vem pela URL -->
+      <select class="select-field" id="professorSelect">
+        <option value="" disabled selected>Seu professor</option>
+      </select>
+      <!-- Professor fixo (mostrado quando vem pela URL ?prof=) -->
+      <div class="prof-fixed" id="profFixed" style="display:none;">
+        <span class="prof-icon">✦</span>
+        <span>Professor: <span class="prof-name" id="profFixedName"></span></span>
+      </div>
+
+      <select class="select-field" id="tempoCasa">
+        <option value="" disabled selected>Há quanto tempo você treina aqui?</option>
+        <option>Menos de 3 meses</option>
+        <option>3 a 6 meses</option>
+        <option>6 a 12 meses</option>
+        <option>Mais de 1 ano</option>
+      </select>
+
+      <button class="btn-next" onclick="goNext(1)">Começar</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 — Q1 Continuidade -->
+  <div class="step" id="step-2">
+    <div class="step-inner">
+      <div class="step-tag" id="tag-2"></div>
+      <div class="step-question">Qual a chance de você ainda estar treinando aqui daqui a 6 meses?</div>
+      <div class="step-sub">0 = com certeza não · 10 = com certeza sim</div>
+      <div class="nps-scale" id="scale-continuidade"></div>
+      <div class="nps-anchors"><span>Não continuo</span><span>Continuo com certeza</span></div>
+      <button class="btn-next" id="btn-2" onclick="goNext(2)" disabled>Próximo</button>
+      <button class="btn-back" onclick="goBack(2)">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 — Q2 Pensou em cancelar -->
+  <div class="step" id="step-3">
+    <div class="step-inner">
+      <div class="step-tag" id="tag-3"></div>
+      <div class="step-question">Nos últimos 3 meses, você chegou a pensar em cancelar ou pausar?</div>
+      <div class="step-sub">Pode ser sincero — é justamente isso que queremos entender.</div>
+      <div class="choice-list" id="choice-cancelar">
+        <div class="choice-opt" onclick="selectChoice('cancelar','Não pensei', this)"><span class="choice-dot"></span>Não, nem passou pela cabeça</div>
+        <div class="choice-opt" onclick="selectChoice('cancelar','Pensei, mas descartei', this)"><span class="choice-dot"></span>Pensei, mas descartei</div>
+        <div class="choice-opt" onclick="selectChoice('cancelar','Considero seriamente', this)"><span class="choice-dot"></span>Sim, considero seriamente</div>
+      </div>
+      <button class="btn-next" id="btn-3" onclick="goNext(3)" disabled>Próximo</button>
+      <button class="btn-back" onclick="goBack(3)">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 — Q3 Evolução -->
+  <div class="step" id="step-4">
+    <div class="step-inner">
+      <div class="step-tag" id="tag-4"></div>
+      <div class="step-question">O quanto você sente que está evoluindo em direção ao seu objetivo?</div>
+      <div class="step-sub">Pense no resultado que você buscava quando começou.</div>
+      <div class="nps-scale" id="scale-evolucao"></div>
+      <div class="nps-anchors"><span>Não evoluo</span><span>Evoluo muito</span></div>
+      <button class="btn-next" id="btn-4" onclick="goNext(4)" disabled>Próximo</button>
+      <button class="btn-back" onclick="goBack(4)">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- STEP 5 — Q4 Vínculo -->
+  <div class="step" id="step-5">
+    <div class="step-inner">
+      <div class="step-tag" id="tag-5"></div>
+      <div class="step-question">O quanto você se sente acolhido e conhecido pelo seu professor?</div>
+      <div class="step-sub">Ele lembra do seu histórico, suas dores, seus objetivos?</div>
+      <div class="nps-scale" id="scale-vinculo"></div>
+      <div class="nps-anchors"><span>Pouco</span><span>Muito</span></div>
+      <button class="btn-next" id="btn-5" onclick="goNext(5)" disabled>Próximo</button>
+      <button class="btn-back" onclick="goBack(5)">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- STEP 6 — Q5 Recomendação (eNPS nominal) -->
+  <div class="step" id="step-6">
+    <div class="step-inner">
+      <div class="step-tag" id="tag-6"></div>
+      <div class="step-question" id="q-recomendacao">O quanto você recomendaria treinar com o seu professor a um amigo?</div>
+      <div class="step-sub">0 = jamais recomendaria · 10 = recomendaria sem pensar</div>
+      <div class="nps-scale" id="scale-recomendacao"></div>
+      <div class="nps-anchors"><span>Não recomendo</span><span>Recomendo muito</span></div>
+      <button class="btn-next" id="btn-6" onclick="goNext(6)" disabled>Próximo</button>
+      <button class="btn-back" onclick="goBack(6)">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- STEP 7 — Q6 Treino -->
+  <div class="step" id="step-7">
+    <div class="step-inner">
+      <div class="step-tag" id="tag-7"></div>
+      <div class="step-question">Os treinos são desafiadores e variados o suficiente para você?</div>
+      <div class="step-sub">Consideração sobre monotonia, novidade e nível de esforço.</div>
+      <div class="nps-scale" id="scale-treino"></div>
+      <div class="nps-anchors"><span>Repetitivos</span><span>Sempre desafiadores</span></div>
+      <button class="btn-next" id="btn-7" onclick="goNext(7)" disabled>Próximo</button>
+      <button class="btn-back" onclick="goBack(7)">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- STEP 8 — Q7 Reposição -->
+  <div class="step" id="step-8">
+    <div class="step-inner">
+      <div class="step-tag" id="tag-8"></div>
+      <div class="step-question">Você consegue repor aulas quando precisa, sem dificuldade?</div>
+      <div class="step-sub">Disponibilidade e facilidade para reagendar.</div>
+      <div class="nps-scale" id="scale-reposicao"></div>
+      <div class="nps-anchors"><span>Muito difícil</span><span>Muito fácil</span></div>
+      <button class="btn-next" id="btn-8" onclick="goNext(8)" disabled>Próximo</button>
+      <button class="btn-back" onclick="goBack(8)">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- STEP 9 — Q8 Valor x preço -->
+  <div class="step" id="step-9">
+    <div class="step-inner">
+      <div class="step-tag" id="tag-9"></div>
+      <div class="step-question">O quanto o que você recebe justifica o valor que você paga?</div>
+      <div class="step-sub">Pense na experiência completa, não só no preço.</div>
+      <div class="nps-scale" id="scale-valor"></div>
+      <div class="nps-anchors"><span>Não vale</span><span>Vale muito</span></div>
+      <button class="btn-next" id="btn-9" onclick="goNext(9)" disabled>Próximo</button>
+      <button class="btn-back" onclick="goBack(9)">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- STEP 10 — Abertas -->
+  <div class="step" id="step-10">
+    <div class="step-inner">
+      <div class="step-tag" id="tag-10"></div>
+      <div class="step-question">Só mais duas perguntas rápidas 🙏</div>
+      <div class="step-sub">Pode responder em poucas palavras — ou pular se preferir.</div>
+
+      <div class="motivo-wrap">
+        <label class="motivo-label">Qual resultado você esperava ter até agora e ainda não teve? <span>(opcional)</span></label>
+        <textarea class="input-field" id="abertaResultado" placeholder="Escreva aqui..."></textarea>
+      </div>
+      <div class="motivo-wrap">
+        <label class="motivo-label">Se um dia você decidisse sair, qual seria o principal motivo? <span>(opcional)</span></label>
+        <textarea class="input-field" id="abertaSaida" placeholder="Escreva aqui..."></textarea>
+      </div>
+
+      <button class="btn-next" id="btn-10" onclick="submitForm()">Enviar respostas</button>
+      <button class="btn-back" onclick="goBack(10)">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- STEP 11 — Sucesso -->
+  <div class="step" id="step-11">
+    <div class="step-inner" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+      <div class="success-icon">✦</div>
+      <div class="success-title">Obrigado, <span id="nomeConfirmacao" style="color:var(--gold)"></span>!</div>
+      <div class="success-sub">Suas respostas foram registradas. Cada opinião nos ajuda a cuidar melhor de você e do seu treino.</div>
+      <div style="margin-top:32px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--w30);">Best You Studio</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ══════════════════════════════════════════════════════════════
+  // CONFIGURAÇÃO
+  // ══════════════════════════════════════════════════════════════
+  // 1) URL do Google Apps Script (publicado como Web App). Cole após o deploy.
+  const APPS_SCRIPT_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
+
+  // 2) Os 2 professores da pesquisa.
+  const PROFESSORES = ['Dominique', 'Xileno'];
+
+  // COMO ENVIAR PELO WHATSAPP (recomendado):
+  // Envie para cada aluno o link já com o professor embutido, assim ele nem
+  // precisa escolher. Use o primeiro nome (ou nome exato) no parâmetro ?prof= :
+  //   .../bestyou-pesquisa.html?prof=Dominique
+  //   .../bestyou-pesquisa.html?prof=Xileno
+  // Se o link não tiver ?prof=, o aluno escolhe entre os 2 no dropdown.
+  // ══════════════════════════════════════════════════════════════
+
+  const TOTAL_STEPS = 10; // passos de pergunta (identificação = passo 1)
+  let currentStep = 1;
+  let professorFixo = null;
+
+  const answers = {
+    continuidade: null, cancelar: null, evolucao: null, vinculo: null,
+    recomendacao: null, treino: null, reposicao: null, valor: null
+  };
+
+  // Campos que usam escala 0-10 e o step correspondente (para habilitar o botão)
+  const npsFields = {
+    continuidade: 2, evolucao: 4, vinculo: 5, recomendacao: 6, treino: 7, reposicao: 8, valor: 9
+  };
+
+  // ── Setup inicial ──────────────────────────────────────────────
+  function init() {
+    // Preenche dropdown de professores
+    const sel = document.getElementById('professorSelect');
+    PROFESSORES.forEach(p => {
+      const opt = document.createElement('option');
+      opt.textContent = p; sel.appendChild(opt);
+    });
+
+    // Professor via URL?
+    const params = new URLSearchParams(window.location.search);
+    const profParam = params.get('prof');
+    if (profParam) {
+      professorFixo = profParam.trim();
+      document.getElementById('professorSelect').style.display = 'none';
+      document.getElementById('profFixed').style.display = 'flex';
+      document.getElementById('profFixedName').textContent = professorFixo;
+    }
+
+    // Gera as escalas 0-10
+    Object.keys(npsFields).forEach(field => buildScale(field));
+
+    updateProgress();
+  }
+
+  function buildScale(field) {
+    const container = document.getElementById('scale-' + field);
+    for (let i = 0; i <= 10; i++) {
+      const btn = document.createElement('div');
+      btn.className = 'nps-opt';
+      btn.textContent = i;
+      btn.onclick = function () { selectNps(field, i, btn); };
+      container.appendChild(btn);
+    }
+  }
+
+  function selectNps(field, value, el) {
+    answers[field] = value;
+    const container = document.getElementById('scale-' + field);
+    container.querySelectorAll('.nps-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('btn-' + npsFields[field]).disabled = false;
+  }
+
+  function selectChoice(field, value, el) {
+    answers[field] = value;
+    const container = document.getElementById('choice-' + field);
+    container.querySelectorAll('.choice-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('btn-3').disabled = false;
+  }
+
+  function getProfessor() {
+    return professorFixo || document.getElementById('professorSelect').value;
+  }
+
+  function updateProgress() {
+    const pct = ((currentStep - 1) / (TOTAL_STEPS - 1)) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+    const labelEl = document.getElementById('progressLabel');
+    if (currentStep === 1) {
+      labelEl.textContent = 'Best You Studio · Pesquisa de Experiência';
+    } else if (currentStep === 11) {
+      labelEl.textContent = '';
+      document.getElementById('progressFill').style.width = '100%';
+    } else {
+      labelEl.textContent = `Pergunta ${currentStep - 1} de 9`;
+      const tag = document.getElementById('tag-' + currentStep);
+      if (tag) tag.textContent = `Pergunta ${currentStep - 1} de 9`;
+    }
+  }
+
+  function showStep(n) {
+    const current = document.getElementById('step-' + currentStep);
+    current.classList.add('leaving');
+    setTimeout(() => {
+      current.classList.remove('active', 'leaving');
+      currentStep = n;
+      document.getElementById('step-' + n).classList.add('active');
+      updateProgress();
+    }, 300);
+  }
+
+  function goNext(from) {
+    if (from === 1) {
+      const nome = document.getElementById('nomeAluno').value.trim();
+      const prof = getProfessor();
+      const tempo = document.getElementById('tempoCasa').value;
+      if (!nome || !prof || !tempo) {
+        if (!nome) document.getElementById('nomeAluno').focus();
+        return;
+      }
+      // Personaliza a pergunta de recomendação com o nome do professor
+      document.getElementById('q-recomendacao').textContent =
+        `O quanto você recomendaria treinar com ${prof} a um amigo?`;
+    }
+    showStep(from + 1);
+  }
+
+  function goBack(from) { showStep(from - 1); }
+
+  async function submitForm() {
+    const nome = document.getElementById('nomeAluno').value.trim();
+    const prof = getProfessor();
+
+    const payload = {
+      timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+      nome: nome,
+      professor: prof,
+      tempoCasa: document.getElementById('tempoCasa').value,
+      continuidade: answers.continuidade,
+      cancelar: answers.cancelar,
+      evolucao: answers.evolucao,
+      vinculo: answers.vinculo,
+      recomendacao: answers.recomendacao,
+      treino: answers.treino,
+      reposicao: answers.reposicao,
+      valor: answers.valor,
+      abertaResultado: document.getElementById('abertaResultado').value.trim() || '—',
+      abertaSaida: document.getElementById('abertaSaida').value.trim() || '—'
+    };
+
+    document.getElementById('sendingOverlay').classList.add('visible');
+    try {
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) { /* no-cors não retorna erro legível */ }
+
+    document.getElementById('sendingOverlay').classList.remove('visible');
+    document.getElementById('nomeConfirmacao').textContent = nome.split(' ')[0];
+    showStep(11);
+  }
+
+  init();
+</script>
+</body>
+</html>
